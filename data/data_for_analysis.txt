@@ -19,5 +19,3 @@ Full Data from Same Columns:
 2020-01-10	8
 2020-01-11	9
 2020-01-12	10
-
-
