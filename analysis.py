@@ -92,7 +92,7 @@ def call_gpt4_api(chart_img_path, sheet_data, chart_data, initial_analysis):
     Cherry Picking Check: {initial_analysis['cherry_picking_check']}
     Chart: see attached image
 
-    Analyze the following chart data and dataset for any additional ethical or aesthetic concerns. Your response will be used to provide feedback to the creator of the chart. Assume that the person reading your prompt doesn't have access to the initial warnings about the chart.
+    Analyze the following chart image, chart data (subset of complete dataset), and complete dataset for any additional ethical or aesthetic concerns. Your response will be used to provide feedback to the creator of the chart. Assume that the person reading your prompt doesn't have access to the initial warnings about the chart.
     If needed, you can refer to the full dataset for additional context. Keep an eye out for any potential issues that could mislead viewers or present a biased view of the data. Including but not limited to: misleading truncated axes, cherry-picking data, lack of context, missing data points, inconsistent or deceptive scale, use of 3D effects that distort proportions, inappropriate color schemes, poor color contrast, excessive complexity, missing labels or units, ambiguous or unclear legends, data smoothing that hides variability, selective highlighting, deceptive aggregation of data, over-emphasis on certain data points, data embellishments that distract from the message, manipulating time intervals, omitting baseline or zero-reference, excessive rounding of values, skewed sampling methods, inappropriate visual metaphor, use of colors that imply causation, unnecessary embellishments or "chartjunk," unequal bin sizes in histograms, bias through selective visual emphasis, failure to represent uncertainty, exaggerated differences in pie chart segments, misleading use of area/volume to represent quantity, absence of data sources or citations, misleading aspect ratio, selective inclusion of favorable data, omitting limitations of the data.
     Do not use markdown or anythng that would need to be further rendered.
     The output should also be for the chart creator, not the viewer of the chart. The goal is to provide feedback to the creator on how to improve the chart in terms of any ethical or aesthetic concerns.
@@ -127,11 +127,11 @@ def call_gpt4_api(chart_img_path, sheet_data, chart_data, initial_analysis):
                 ]
             }
         ],
-        "max_tokens": 300
+        "max_tokens": 500
     }
 
+    # Make the API call
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-
 
     # Write the response to a file
     with open('gpt4_response.txt', 'w') as file:
@@ -141,6 +141,7 @@ def call_gpt4_api(chart_img_path, sheet_data, chart_data, initial_analysis):
 
     response = response.json()
 
+    # Return the response from the API
     return response['choices'][0]['message']['content'] 
 
 # Main function to run the analysis
@@ -173,5 +174,5 @@ def analyze_data(chart_img_path):
     return "Analysis complete."
 
 if __name__ == "__main__":
-    chart_img_path = "data/chart.png"  # Set chart image path
+    chart_img_path = "data/chart.png"  
     print(analyze_data(chart_img_path))
