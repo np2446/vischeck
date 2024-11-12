@@ -30,11 +30,21 @@ def check_cherry_picking(sheet_data, chart_data):
     sheet_data["Value"] = pd.to_numeric(sheet_data["Value"], errors='coerce').dropna()
     chart_data["Value"] = pd.to_numeric(chart_data["Value"], errors='coerce').dropna()
     
+    # check range of values in both datasets
     sheet_range = (sheet_data["Value"].min(), sheet_data["Value"].max())
     chart_range = (chart_data["Value"].min(), chart_data["Value"].max())
+
+    # check trendline of chart data
+    chart_trend = "upward" if chart_data["Value"].iloc[-1] > chart_data["Value"].iloc[0] else "downward"
+    # check trendline of sheet data
+    sheet_trend = "upward" if sheet_data["Value"].iloc[-1] > sheet_data["Value"].iloc[0] else "downward"
     
     if chart_range[0] > sheet_range[0] or chart_range[1] < sheet_range[1]:
         return "Warning: The chart data may be cherry-picked, not reflecting the full dataset."
+    
+    if chart_trend != sheet_trend:
+        return "Warning: The chart data may be cherry-picked, not reflecting the full dataset. Trendline is different."
+    
     return "Data appears representative of the entire dataset."
 
 # Read the exported data
@@ -150,18 +160,18 @@ def analyze_data(chart_img_path):
     print(f"Axis Check: {initial_analysis['axis_check']}")
     print(f"Cherry Picking Check: {initial_analysis['cherry_picking_check']}")
     
-    # Call GPT-4 API for deeper analysis
+    # Call LLM (4o) for deeper analysis
     api_response = call_gpt4_api(chart_img_path, full_data, chart_data, initial_analysis)
     
     # Output results from GPT-4 API
-    print("Deeper analysis from GPT-4:")
+    print("Deeper analysis from LLM:")
     print(api_response)
     
     # Display a dialog box with the results
-    messagebox.showinfo("GPT-4 API Results", api_response)
-    # end program
-    exit()
+    messagebox.showinfo("LLM API Results", api_response)
+    
+    return "Analysis complete."
 
 if __name__ == "__main__":
     chart_img_path = "data/chart.png"  # Set chart image path
-    analyze_data(chart_img_path)
+    print(analyze_data(chart_img_path))
