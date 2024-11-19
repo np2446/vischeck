@@ -11,7 +11,6 @@ import os
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_KEY")
 
-
 # Initialize the Tkinter root
 tk.Tk().withdraw()
 
@@ -47,49 +46,16 @@ def check_cherry_picking(sheet_data, chart_data):
     
     return "Data appears representative of the entire dataset."
 
-# Read the exported data
-def load_data():
-    with open('data/data_for_analysis.txt', 'r') as file:
-        lines = file.readlines()
-
-    # Parse chart and sheet data from the file
-    chart_data_start = lines.index("Chart Data:\n") + 1
-    full_data_start = lines.index("Full Data from Same Columns:\n") + 1
-    
-    # Extract and format chart data
-    chart_data_lines = lines[chart_data_start:full_data_start-2]
-    chart_data = pd.DataFrame(
-        [line.strip().split('\t') for line in chart_data_lines],
-        columns=["Date", "Value"]
-    )
-
-    # Extract and format full sheet data
-    full_data_lines = lines[full_data_start:]
-    full_data = pd.DataFrame(
-        [line.strip().split('\t') for line in full_data_lines],
-        columns=["Date", "Value"]
-    )
-
-    # Convert "Value" columns to numeric, with errors coerced to NaN, and drop NaN rows
-    chart_data["Value"] = pd.to_numeric(chart_data["Value"], errors='coerce').dropna()
-    full_data["Value"] = pd.to_numeric(full_data["Value"], errors='coerce').dropna()
-
-    return full_data, chart_data
-
 # Function to call GPT-4 API for deeper analysis
-def call_gpt4_api(chart_img_path, sheet_data, chart_data, initial_analysis):
-    def encode_image(image_path):
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode('utf-8')
-    
-    # Encode the chart image
-    chart_img_base64 = encode_image(chart_img_path)
+def call_gpt4_api(chart_img_base64, sheet_data, chart_data, initial_analysis):
 
     # Create a prompt for GPT-4
     prompt = f"""
     Initial analysis results:
     Axis Check: {initial_analysis['axis_check']}
     Cherry Picking Check: {initial_analysis['cherry_picking_check']}
+    Chart Data: {chart_data.to_json()}
+    Sheet Data: {sheet_data.to_json()}
     Chart: see attached image
 
     Analyze the following chart image, chart data (subset of complete dataset), and complete dataset for any additional ethical or aesthetic concerns. Your response will be used to provide feedback to the creator of the chart. Assume that the person reading your prompt doesn't have access to the initial warnings about the chart.
@@ -145,8 +111,9 @@ def call_gpt4_api(chart_img_path, sheet_data, chart_data, initial_analysis):
     return response['choices'][0]['message']['content'] 
 
 # Main function to run the analysis
-def analyze_data(chart_img_path):
-    full_data, chart_data = load_data()
+def analyze_data(chart_b64, data):
+    full_data = pd.DataFrame(data["full_data"])
+    chart_data = pd.DataFrame(data["chart_data"])
     
     # Perform initial checks
     axis_check = check_truncated_axes(chart_data)
@@ -162,7 +129,7 @@ def analyze_data(chart_img_path):
     print(f"Cherry Picking Check: {initial_analysis['cherry_picking_check']}")
     
     # Call LLM (4o) for deeper analysis
-    api_response = call_gpt4_api(chart_img_path, full_data, chart_data, initial_analysis)
+    api_response = call_gpt4_api(chart_b64, full_data, chart_data, initial_analysis)
     
     # Output results from GPT-4 API
     print("Deeper analysis from LLM:")
@@ -174,5 +141,14 @@ def analyze_data(chart_img_path):
     return "Analysis complete."
 
 if __name__ == "__main__":
-    chart_img_path = "data/chart.png"  
-    print(analyze_data(chart_img_path))
+    def encode_image(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode('utf-8')
+        
+    # sample data
+    data = {"full_data": {"Date":{"0":"2020-01-01","1":"2020-01-02","2":"2020-01-03","3":"2020-01-04","4":"2020-01-05","5":"2020-01-06","6":"2020-01-07","7":"2020-01-08","8":"2020-01-09","9":"2020-01-10","10":"2020-01-11","11":"2020-01-12"},"Value":{"0":10,"1":9,"2":8,"3":7,"4":6,"5":5,"6":5,"7":6,"8":7,"9":8,"10":9,"11":10}},
+            "chart_data": {"Date":{"0":"2020-01-07","1":"2020-01-08","2":"2020-01-09","3":"2020-01-10","4":"2020-01-11","5":"2020-01-12"},"Value":{"0":5,"1":6,"2":7,"3":8,"4":9,"5":10}}}
+
+    chart_img_path = "data/chart.png" 
+    chart_img_base64 = encode_image(chart_img_path) 
+    print(analyze_data(chart_img_base64, data))
