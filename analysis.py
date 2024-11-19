@@ -1,8 +1,6 @@
 import pandas as pd
 import requests
 import json
-import tkinter as tk
-from tkinter import messagebox
 import base64
 from dotenv import load_dotenv
 import os
@@ -11,11 +9,17 @@ import os
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_KEY")
 
-# Initialize the Tkinter root
-tk.Tk().withdraw()
-
 # Function to check for truncated axes
-def check_truncated_axes(data):
+def check_truncated_axes(data: pd.DataFrame) -> str:
+    """
+    Check if the axes of the chart are properly scaled.
+
+    Args:
+    - data: Data from the chart.
+
+    Returns:
+    - A message indicating whether the axes are properly scaled or if there is a warning.
+    """
     # Convert the "Value" column to numeric, coercing errors to NaN, and drop NaN values
     data["Value"] = pd.to_numeric(data["Value"], errors='coerce').dropna()
     min_value = data["Value"].min()
@@ -24,7 +28,17 @@ def check_truncated_axes(data):
     return "Axes appear to be properly scaled."
 
 # Function to check for cherry-picking (omitted data)
-def check_cherry_picking(sheet_data, chart_data):
+def check_cherry_picking(sheet_data: pd.DataFrame, chart_data: pd.DataFrame) -> str:
+    """
+    Check if the chart data is cherry-picked from the full dataset.
+
+    Args:
+    - sheet_data: Data from the full dataset.
+    - chart_data: Data from the chart.
+
+    Returns:
+    - A message indicating whether the chart data is representative of the full dataset or if there is a warning.
+    """
     # Ensure both datasets are numeric for comparison
     sheet_data["Value"] = pd.to_numeric(sheet_data["Value"], errors='coerce').dropna()
     chart_data["Value"] = pd.to_numeric(chart_data["Value"], errors='coerce').dropna()
@@ -46,8 +60,38 @@ def check_cherry_picking(sheet_data, chart_data):
     
     return "Data appears representative of the entire dataset."
 
+def initial_checks(chart_data: pd.DataFrame, full_data: pd.DataFrame) -> dict:
+    """
+    Perform initial checks on the chart data.
+
+    Args: 
+    - chart_data: Data from the chart.
+    - full_data: Data from the full dataset.
+
+    Returns:
+    - A dictionary containing the results of the initial checks.
+    """
+    axis_check = check_truncated_axes(chart_data)
+    cherry_picking_check = check_cherry_picking(full_data, chart_data)
+    return {
+        "axis_check": axis_check,
+        "cherry_picking_check": cherry_picking_check
+    }
+
 # Function to call GPT-4 API for deeper analysis
-def call_gpt4_api(chart_img_base64, sheet_data, chart_data, initial_analysis):
+def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DateFrame, chart_data: pd.DataFrame, initial_analysis: dict) -> str:
+    """
+    Call the GPT-4 API for deeper analysis.
+
+    Args: 
+    - chart_img_base64: Base64 encoded image of the chart.
+    - sheet_data: Data from the full dataset.
+    - chart_data: Data from the chart.
+    - initial_analysis: Initial analysis results.
+
+    Returns:
+    - A response from the GPT-4 API. This response will contain feedback on the chart.
+    """
 
     # Create a prompt for GPT-4
     prompt = f"""
@@ -111,17 +155,22 @@ def call_gpt4_api(chart_img_base64, sheet_data, chart_data, initial_analysis):
     return response['choices'][0]['message']['content'] 
 
 # Main function to run the analysis
-def analyze_data(chart_b64, data):
+def analyze_data(chart_b64: str, data: dict) -> str:
+    """
+    Analyze the chart data and call the GPT-4 API for deeper analysis.
+    
+    Args:
+    - chart_b64: Base64 encoded image of the chart.
+    - data: A dictionary containing the full data and chart data.
+    
+    Returns:
+    - A string containing the results of the analysis.
+    """
     full_data = pd.DataFrame(data["full_data"])
     chart_data = pd.DataFrame(data["chart_data"])
     
     # Perform initial checks
-    axis_check = check_truncated_axes(chart_data)
-    cherry_picking_check = check_cherry_picking(full_data, chart_data)
-    initial_analysis = {
-        "axis_check": axis_check,
-        "cherry_picking_check": cherry_picking_check
-    }
+    initial_analysis = initial_checks(chart_data, full_data)
     
     # Output initial results
     print("Initial analysis:")
@@ -135,10 +184,7 @@ def analyze_data(chart_b64, data):
     print("Deeper analysis from LLM:")
     print(api_response)
     
-    # Display a dialog box with the results
-    messagebox.showinfo("LLM API Results", api_response)
-    
-    return "Analysis complete."
+    return api_response
 
 if __name__ == "__main__":
     def encode_image(image_path):
