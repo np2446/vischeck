@@ -1,12 +1,15 @@
 # .env file
 .env
+backend/.env
+backend/~$Book.xlsm
+
 
 #anything in output folder
 output/
-gpt4_response.txt
+backend/gpt4_response.txt
 ~$Book2.xlsm
-archive.xlsm
-vba_function.txt
+backend/archive.xlsm
+backend/vba_function.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -171,4 +174,26 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# dependencies
+frontend/node_modules
+frontend/.pnp
+frontend/.pnp.js
+
+# testing
+frontend/coverage
+
+# production
+frontend/build
+
+# misc
+frontend/.DS_Store
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
