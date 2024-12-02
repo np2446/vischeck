@@ -79,7 +79,7 @@ def initial_checks(chart_data: pd.DataFrame, full_data: pd.DataFrame) -> dict:
     }
 
 # Function to call GPT-4 API for deeper analysis
-def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DateFrame, chart_data: pd.DataFrame, initial_analysis: dict) -> str:
+def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: pd.DataFrame, initial_analysis: dict) -> str:
     """
     Call the GPT-4 API for deeper analysis.
 

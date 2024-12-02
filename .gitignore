@@ -5,6 +5,8 @@
 output/
 gpt4_response.txt
 ~$Book2.xlsm
+archive.xlsm
+vba_function.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
