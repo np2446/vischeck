@@ -106,7 +106,6 @@ VisCheck is a comprehensive web application designed for users to upload chart i
 ### Backend
 - Flask
 - Pandas
-- OpenCV (if image processing is involved)
 
 ---
 
