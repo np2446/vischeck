@@ -171,7 +171,7 @@ function FileUpload() {
             align="center"
             sx={{ color: '#0078D4', fontWeight: 600 }}
           >
-            VisCheck - File Upload
+            VisCheck
           </Typography>
           <Box
             component="form"
