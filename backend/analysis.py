@@ -151,7 +151,10 @@ def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: p
     response = response.json()
 
     # Return the response from the API
-    return response['choices'][0]['message']['content'] 
+    try:
+        return response['choices'][0]['message']['content'] 
+    except:
+        return response
 
 # Main function to run the analysis
 def analyze_data(chart_b64: str, data: dict) -> str:

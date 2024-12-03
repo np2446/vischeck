@@ -119,7 +119,7 @@ function FileUpload() {
     const fullData = await parseCSV(fullDataCSV);
 
     try {
-      const response = await axios.post('http://localhost:8000/process-data', {
+      const response = await axios.post('https://intense-sands-59577-33fe9a67166e.herokuapp.com/process-data', {
         chart_data: chartData,
         full_data: fullData,
         chart_base64: chartImage
