@@ -42,6 +42,7 @@ function FileUpload() {
   const [chartImage, setChartImage] = useState(null);
   const [chartDataCSV, setChartDataCSV] = useState(null);
   const [fullDataCSV, setFullDataCSV] = useState(null);
+  const backendURL = process.env.BACKEND_URL || 'http://localhost:8000/process-data';
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({
@@ -53,9 +54,11 @@ function FileUpload() {
 
   useEffect(() => {
     if (response) {
+      // set reponse to empty string to clear the previous response
+      setTypedResponse(response[0]);
       let index = 0;
       const interval = setInterval(() => {
-        if (index < response.length) {
+        if (index < response.length && response[index]) {
           setTypedResponse(prev => prev + response[index]);
           index += 1;
         } else {
@@ -113,13 +116,17 @@ function FileUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!chartImage || !chartDataCSV || !fullDataCSV) return;
+    // Only check if chartImage is present
+    if (!chartImage) return;
+  
     setLoading(true);
-    const chartData = await parseCSV(chartDataCSV);
-    const fullData = await parseCSV(fullDataCSV);
-
+  
+    // If chartDataCSV or fullDataCSV are provided, parse them; otherwise, set them to null
+    const chartData = chartDataCSV ? await parseCSV(chartDataCSV) : null;
+    const fullData = fullDataCSV ? await parseCSV(fullDataCSV) : null;
+  
     try {
-      const response = await axios.post('https://intense-sands-59577-33fe9a67166e.herokuapp.com/process-data', {
+      const response = await axios.post(backendURL, {
         chart_data: chartData,
         full_data: fullData,
         chart_base64: chartImage
@@ -138,16 +145,22 @@ function FileUpload() {
         header: true,
         skipEmptyLines: true,
         complete: results => {
-          const dataSchema = { Date: {}, Value: {} };
-          results.data.forEach((row, index) => {
-            if (row['Date'] && row['Quantity Sold']) {
-              const [month, day, year] = row['Date'].split('/');
-              const formattedDate = `20${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              dataSchema.Date[index.toString()] = formattedDate;
-              dataSchema.Value[index.toString()] = parseInt(row['Quantity Sold'], 10);
-            }
+          // Convert array of row objects into a column-oriented structure if desired:
+          // Example: Convert [{col1:val11, col2:val12}, {col1:val21, col2:val22}] 
+          // into {col1:{0:val11, 1:val21}, col2:{0:val12, 1:val22}}
+          
+          const rows = results.data;
+          const columns = {};
+  
+          rows.forEach((row, rowIndex) => {
+            Object.keys(row).forEach(colName => {
+              if (!columns[colName]) columns[colName] = {};
+              columns[colName][rowIndex] = row[colName];
+            });
           });
-          resolve(dataSchema);
+  
+          // Resolve with a column-oriented data structure:
+          resolve(columns);
         },
         error: err => reject(err),
       });
@@ -216,7 +229,7 @@ function FileUpload() {
               type="submit"
               variant="contained"
               color="secondary"
-              disabled={!chartImage || !chartDataCSV || !fullDataCSV}
+              disabled={!chartImage}
             >
               Submit
             </Button>
