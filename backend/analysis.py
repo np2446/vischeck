@@ -9,114 +9,89 @@ import os
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_KEY")
 
-# Function to check for truncated axes
 def check_truncated_axes(data: pd.DataFrame) -> str:
-    """
-    Check if the axes of the chart are properly scaled.
+    try:
+        data["Value"] = pd.to_numeric(data["Value"], errors='coerce')
+        data = data.dropna(subset=["Value"])
+        if data.empty:
+            # If no valid numeric data, skip this check
+            return ""
+        min_value = data["Value"].min()
+        if min_value > 0:
+            return "Warning: The axis may be truncated, potentially misleading the viewer."
+        return "Axes appear properly scaled."
+    except Exception:
+        # If any error occurs, skip reporting
+        return ""
 
-    Args:
-    - data: Data from the chart.
-
-    Returns:
-    - A message indicating whether the axes are properly scaled or if there is a warning.
-    """
-    # Convert the "Value" column to numeric, coercing errors to NaN, and drop NaN values
-    data["Value"] = pd.to_numeric(data["Value"], errors='coerce').dropna()
-    min_value = data["Value"].min()
-    if min_value > 0:
-        return "Warning: The axis may be truncated, which could mislead viewers."
-    return "Axes appear to be properly scaled."
-
-# Function to check for cherry-picking (omitted data)
 def check_cherry_picking(sheet_data: pd.DataFrame, chart_data: pd.DataFrame) -> str:
-    """
-    Check if the chart data is cherry-picked from the full dataset.
+    try:
+        # Ensure both datasets are numeric for comparison
+        sheet_data["Value"] = pd.to_numeric(sheet_data["Value"], errors='coerce')
+        chart_data["Value"] = pd.to_numeric(chart_data["Value"], errors='coerce')
+        sheet_data = sheet_data.dropna(subset=["Value"])
+        chart_data = chart_data.dropna(subset=["Value"])
 
-    Args:
-    - sheet_data: Data from the full dataset.
-    - chart_data: Data from the chart.
+        if sheet_data.empty or chart_data.empty:
+            # If no valid numeric data, skip this check
+            return ""
 
-    Returns:
-    - A message indicating whether the chart data is representative of the full dataset or if there is a warning.
-    """
-    # Ensure both datasets are numeric for comparison
-    sheet_data["Value"] = pd.to_numeric(sheet_data["Value"], errors='coerce').dropna()
-    chart_data["Value"] = pd.to_numeric(chart_data["Value"], errors='coerce').dropna()
-    
-    # check range of values in both datasets
-    sheet_range = (sheet_data["Value"].min(), sheet_data["Value"].max())
-    chart_range = (chart_data["Value"].min(), chart_data["Value"].max())
+        sheet_range = (sheet_data["Value"].min(), sheet_data["Value"].max())
+        chart_range = (chart_data["Value"].min(), chart_data["Value"].max())
 
-    # check trendline of chart data
-    chart_trend = "upward" if chart_data["Value"].iloc[-1] > chart_data["Value"].iloc[0] else "downward"
-    # check trendline of sheet data
-    sheet_trend = "upward" if sheet_data["Value"].iloc[-1] > sheet_data["Value"].iloc[0] else "downward"
-    
-    if chart_range[0] > sheet_range[0] or chart_range[1] < sheet_range[1]:
-        return "Warning: The chart data may be cherry-picked, not reflecting the full dataset."
-    
-    if chart_trend != sheet_trend:
-        return "Warning: The chart data may be cherry-picked, not reflecting the full dataset. Trendline is different."
-    
-    return "Data appears representative of the entire dataset."
+        chart_trend = "upward" if chart_data["Value"].iloc[-1] > chart_data["Value"].iloc[0] else "downward"
+        sheet_trend = "upward" if sheet_data["Value"].iloc[-1] > sheet_data["Value"].iloc[0] else "downward"
+
+        if chart_range[0] > sheet_range[0] or chart_range[1] < sheet_range[1]:
+            return "Warning: The chart data may be cherry-picked, not reflecting the full dataset."
+
+        if chart_trend != sheet_trend:
+            return "Warning: The chart data may be cherry-picked, as the overall trend differs from the full dataset."
+
+        return "Data appears representative of the entire dataset."
+    except Exception:
+        # If any error occurs, skip reporting
+        return ""
 
 def initial_checks(chart_data: pd.DataFrame, full_data: pd.DataFrame) -> dict:
-    """
-    Perform initial checks on the chart data.
-
-    Args: 
-    - chart_data: Data from the chart.
-    - full_data: Data from the full dataset.
-
-    Returns:
-    - A dictionary containing the results of the initial checks.
-    """
-    axis_check = check_truncated_axes(chart_data)
-    cherry_picking_check = check_cherry_picking(full_data, chart_data)
-    return {
-        "axis_check": axis_check,
-        "cherry_picking_check": cherry_picking_check
+    results = {
+        "axis_check": "",
+        "cherry_picking_check": ""
     }
+    # Perform checks only if data is present and valid
+    if chart_data is not None and not chart_data.empty:
+        results["axis_check"] = check_truncated_axes(chart_data)
+    if full_data is not None and not full_data.empty and chart_data is not None and not chart_data.empty:
+        results["cherry_picking_check"] = check_cherry_picking(full_data, chart_data)
+    return results
 
-# Function to call GPT-4 API for deeper analysis
 def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: pd.DataFrame, initial_analysis: dict) -> str:
-    """
-    Call the GPT-4 API for deeper analysis.
-
-    Args: 
-    - chart_img_base64: Base64 encoded image of the chart.
-    - sheet_data: Data from the full dataset.
-    - chart_data: Data from the chart.
-    - initial_analysis: Initial analysis results.
-
-    Returns:
-    - A response from the GPT-4 API. This response will contain feedback on the chart.
-    """
-
-    # Create a prompt for GPT-4
+    # Create a robust prompt for GPT-4
+    # No markdown or special formatting, just text.
     prompt = f"""
-    Initial analysis results:
-    Axis Check: {initial_analysis['axis_check']}
-    Cherry Picking Check: {initial_analysis['cherry_picking_check']}
-    Chart Data: {chart_data.to_json()}
-    Sheet Data: {sheet_data.to_json()}
-    Chart: see attached image
+You are an expert in data visualization ethics and aesthetics. You have a chart image and optionally some chart data and a full dataset.
 
-    Analyze the following chart image, chart data (subset of complete dataset), and complete dataset for any additional ethical or aesthetic concerns. Your response will be used to provide feedback to the creator of the chart. Assume that the person reading your prompt doesn't have access to the initial warnings about the chart.
-    If needed, you can refer to the full dataset for additional context. Keep an eye out for any potential issues that could mislead viewers or present a biased view of the data. Including but not limited to: misleading truncated axes, cherry-picking data, lack of context, missing data points, inconsistent or deceptive scale, use of 3D effects that distort proportions, inappropriate color schemes, poor color contrast, excessive complexity, missing labels or units, ambiguous or unclear legends, data smoothing that hides variability, selective highlighting, deceptive aggregation of data, over-emphasis on certain data points, data embellishments that distract from the message, manipulating time intervals, omitting baseline or zero-reference, excessive rounding of values, skewed sampling methods, inappropriate visual metaphor, use of colors that imply causation, unnecessary embellishments or "chartjunk," unequal bin sizes in histograms, bias through selective visual emphasis, failure to represent uncertainty, exaggerated differences in pie chart segments, misleading use of area/volume to represent quantity, absence of data sources or citations, misleading aspect ratio, selective inclusion of favorable data, omitting limitations of the data.
-    Do not use markdown or anythng that would need to be further rendered.
-    The output should also be for the chart creator, not the viewer of the chart. The goal is to provide feedback to the creator on how to improve the chart in terms of any ethical or aesthetic concerns.
-    """
+Initial analysis results:
+Axis Check: {initial_analysis.get('axis_check', '')}
+Cherry Picking Check: {initial_analysis.get('cherry_picking_check', '')}
 
-    print(f"Sheet Data: {sheet_data.to_json()}")
-    print(f"Chart Data: {chart_data.to_json()}")
+Chart Data: {chart_data.to_json() if chart_data is not None else "No Chart Data Provided"}
+Sheet Data: {sheet_data.to_json() if sheet_data is not None else "No Full Data Provided"}
+Chart: see attached image
 
-    # Call the GPT-4 API, send prompt along with the actual image
+Your task is to provide constructive feedback to the chart's creator. The goal is to help them improve the chart so it does not mislead viewers, and so it adheres to best practices in ethical and aesthetic data visualization. Consider issues like truncated axes, cherry-picking of data, lack of context, missing data points, deceptive scales, confusing 3D effects, poor color choices, overcomplexity, missing labels, unclear legends, data smoothing that obscures important variation, selective highlighting that distorts the message, data embellishments, manipulations of time intervals, baseline omissions, rounding issues, sampling biases, inappropriate visual metaphors, and any form of chartjunk that detracts from clarity.
+
+If the chart is missing certain data or you cannot confirm certain issues due to incomplete information, focus on general best practices and potential pitfalls. The output should be given directly to the creator, guiding them on how to avoid any ethical or misleading practices and how to improve aesthetics, clarity, and honesty in their data visualization.
+
+Do not use markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. Do not reference the fact that the user is reading this prompt or that you are an AI. Simply offer advice and observations. If initial checks are empty or if you have no data to analyze, provide general recommendations.
+"""
+
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {openai_api_key}"
     }
 
+    # Construct payload
     payload = {
         "model": "gpt-4o",
         "messages": [
@@ -139,61 +114,51 @@ def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: p
         "max_tokens": 500
     }
 
-    # Make the API call
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    response_json = response.json()
 
-    # Write the response to a file
-    with open('gpt4_response.txt', 'w') as file:
-        file.write(f"GPT-4 API call successful. with info: {sheet_data.to_json()} {chart_data.to_json()}")
-        file.write("\n")
-        file.write(json.dumps(response.json(), indent=4))
+    # Attempt to return the model's response
+    try:
+        return response_json['choices'][0]['message']['content']
+    except:
+        # If we can't parse a correct response, return something generic
+        return "No additional feedback could be generated, response: " + str(response_json)
 
-    response = response.json()
-
-    # Return the response from the API
-    return response['choices'][0]['message']['content'] 
-
-# Main function to run the analysis
 def analyze_data(chart_b64: str, data: dict) -> str:
-    """
-    Analyze the chart data and call the GPT-4 API for deeper analysis.
-    
-    Args:
-    - chart_b64: Base64 encoded image of the chart.
-    - data: A dictionary containing the full data and chart data.
-    
-    Returns:
-    - A string containing the results of the analysis.
-    """
-    full_data = pd.DataFrame(data["full_data"])
-    chart_data = pd.DataFrame(data["chart_data"])
-    
-    # Perform initial checks
-    initial_analysis = initial_checks(chart_data, full_data)
-    
-    # Output initial results
-    print("Initial analysis:")
-    print(f"Axis Check: {initial_analysis['axis_check']}")
-    print(f"Cherry Picking Check: {initial_analysis['cherry_picking_check']}")
-    
-    # Call LLM (4o) for deeper analysis
-    api_response = call_gpt4_api(chart_b64, full_data, chart_data, initial_analysis)
-    
-    # Output results from GPT-4 API
-    print("Deeper analysis from LLM:")
-    print(api_response)
-    
-    return api_response
+    # Chart image is required. Data may be optional.
+    full_data_df = None
+    chart_data_df = None
 
-if __name__ == "__main__":
-    def encode_image(image_path):
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode('utf-8')
-        
-    # sample data
-    data = {"full_data": {"Date":{"0":"2020-01-01","1":"2020-01-02","2":"2020-01-03","3":"2020-01-04","4":"2020-01-05","5":"2020-01-06","6":"2020-01-07","7":"2020-01-08","8":"2020-01-09","9":"2020-01-10","10":"2020-01-11","11":"2020-01-12"},"Value":{"0":10,"1":9,"2":8,"3":7,"4":6,"5":5,"6":5,"7":6,"8":7,"9":8,"10":9,"11":10}},
-            "chart_data": {"Date":{"0":"2020-01-07","1":"2020-01-08","2":"2020-01-09","3":"2020-01-10","4":"2020-01-11","5":"2020-01-12"},"Value":{"0":5,"1":6,"2":7,"3":8,"4":9,"5":10}}}
+    # Attempt to create DataFrames if provided
+    try:
+        if "full_data" in data and data["full_data"]:
+            full_data_df = pd.DataFrame(data["full_data"])
+    except:
+        pass
 
-    chart_img_path = "data/chart.png" 
-    chart_img_base64 = encode_image(chart_img_path) 
-    print(analyze_data(chart_img_base64, data))
+    try:
+        if "chart_data" in data and data["chart_data"]:
+            chart_data_df = pd.DataFrame(data["chart_data"])
+    except:
+        pass
+
+    # Perform initial checks only if dataframes are present
+    try:
+        initial_analysis = initial_checks(chart_data_df, full_data_df)
+    except:
+        # If checks fail, just set them empty
+        initial_analysis = {"axis_check": "", "cherry_picking_check": ""}
+
+    # If no data analysis is possible, we can still provide general advice via GPT-4.
+    # But only call GPT if we have a chart image.
+    if not chart_b64:
+        return "No chart image provided. Unable to provide analysis."
+
+    # Call GPT-4 API even if data is missing; it can give general advice.
+    try:
+        api_response = call_gpt4_api(chart_b64, full_data_df, chart_data_df, initial_analysis)
+        return api_response
+    except Exception as e:
+        # If GPT call fails, return a generic message
+        print(f"Error in GPT-4 API call: {e}")
+        return "Could not provide additional feedback at this time."
