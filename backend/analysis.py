@@ -20,7 +20,8 @@ def check_truncated_axes(data: pd.DataFrame) -> str:
         if min_value > 0:
             return "Warning: The axis may be truncated, potentially misleading the viewer."
         return "Axes appear properly scaled."
-    except Exception:
+    except Exception as e:
+        print(f"Error in axis check: {e}")
         # If any error occurs, skip reporting
         return ""
 
@@ -49,8 +50,9 @@ def check_cherry_picking(sheet_data: pd.DataFrame, chart_data: pd.DataFrame) -> 
             return "Warning: The chart data may be cherry-picked, as the overall trend differs from the full dataset."
 
         return "Data appears representative of the entire dataset."
-    except Exception:
+    except Exception as e:
         # If any error occurs, skip reporting
+        print(f"Error in cherry-picking check: {e}")
         return ""
 
 def initial_checks(chart_data: pd.DataFrame, full_data: pd.DataFrame) -> dict:
@@ -84,6 +86,8 @@ Your task is to provide constructive feedback to the chart's creator. The goal i
 If the chart is missing certain data or you cannot confirm certain issues due to incomplete information, focus on general best practices and potential pitfalls. The output should be given directly to the creator, guiding them on how to avoid any ethical or misleading practices and how to improve aesthetics, clarity, and honesty in their data visualization.
 
 Do not use markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. Do not reference the fact that the user is reading this prompt or that you are an AI. Simply offer advice and observations. If initial checks are empty or if you have no data to analyze, provide general recommendations.
+
+Seperate your feedback into two sections - one for ethical considerations and one for aesthetic considerations. Provide at least 3 points for each section. If there are any that overlap, only mention it in the ethical considerations section, but note that it also applies to aesthetics and highlight the connection. 
 """
 
     headers = {
@@ -114,15 +118,21 @@ Do not use markdown or formatting that requires further rendering. Keep the lang
         "max_tokens": 500
     }
 
+    print("Calling API with payload:")
+    # print payload for debugging but don't log the chart image base64 as it's too long
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     response_json = response.json()
-
+    to_print = payload.copy()
+    to_print['messages'][0]['content'][1]['image_url']['url'] = f"data:image/jpeg;base64, {chart_img_base64[:50]}, {len(chart_img_base64)} bytes"
+    print(json.dumps(to_print, indent=2))
+    print("Received API response:")
+    print(json.dumps(response_json, indent=2))
     # Attempt to return the model's response
     try:
         return response_json['choices'][0]['message']['content']
-    except:
+    except Exception as e:
         # If we can't parse a correct response, return something generic
-        return "No additional feedback could be generated, response: " + str(response_json)
+        return "No additional feedback could be generated, response: " + str(response_json) + " error: " + str(e)
 
 def analyze_data(chart_b64: str, data: dict) -> str:
     # Chart image is required. Data may be optional.
@@ -133,19 +143,20 @@ def analyze_data(chart_b64: str, data: dict) -> str:
     try:
         if "full_data" in data and data["full_data"]:
             full_data_df = pd.DataFrame(data["full_data"])
-    except:
-        pass
+    except Exception as e:
+        print(f"Error creating full data DataFrame: {e}")
 
     try:
         if "chart_data" in data and data["chart_data"]:
             chart_data_df = pd.DataFrame(data["chart_data"])
-    except:
-        pass
+    except Exception as e:
+        print(f"Error creating chart data DataFrame: {e}")
 
     # Perform initial checks only if dataframes are present
     try:
         initial_analysis = initial_checks(chart_data_df, full_data_df)
-    except:
+    except Exception as e:
+        print(f"Error in initial checks: {e}")
         # If checks fail, just set them empty
         initial_analysis = {"axis_check": "", "cherry_picking_check": ""}
 

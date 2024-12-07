@@ -39,10 +39,10 @@ const theme = createTheme({
 });
 
 function FileUpload() {
+  const [backendUrl, setBackendUrl] = useState("https://intense-sands-59577-33fe9a67166e.herokuapp.com/process-data");
   const [chartImage, setChartImage] = useState(null);
   const [chartDataCSV, setChartDataCSV] = useState(null);
   const [fullDataCSV, setFullDataCSV] = useState(null);
-  const backendURL = process.env.BACKEND_URL || 'http://localhost:8000/process-data';
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({
@@ -126,7 +126,8 @@ function FileUpload() {
     const fullData = fullDataCSV ? await parseCSV(fullDataCSV) : null;
   
     try {
-      const response = await axios.post(backendURL, {
+      console.log("Sending data to backend..." + backendUrl);
+      const response = await axios.post(backendUrl, {
         chart_data: chartData,
         full_data: fullData,
         chart_base64: chartImage
