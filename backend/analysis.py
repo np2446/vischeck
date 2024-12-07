@@ -88,6 +88,8 @@ If the chart is missing certain data or you cannot confirm certain issues due to
 Do not use markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. Do not reference the fact that the user is reading this prompt or that you are an AI. Simply offer advice and observations. If initial checks are empty or if you have no data to analyze, provide general recommendations.
 
 Seperate your feedback into two sections - one for ethical considerations and one for aesthetic considerations. Provide at least 3 points for each section. If there are any that overlap, only mention it in the ethical considerations section, but note that it also applies to aesthetics and highlight the connection. 
+
+If no chart data is provided or the full data isn't provided, don't mention anything about not having the data, just provide general advice based on the chart image alone.
 """
 
     headers = {
