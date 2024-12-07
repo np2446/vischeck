@@ -146,10 +146,6 @@ function FileUpload() {
         header: true,
         skipEmptyLines: true,
         complete: results => {
-          // Convert array of row objects into a column-oriented structure if desired:
-          // Example: Convert [{col1:val11, col2:val12}, {col1:val21, col2:val22}] 
-          // into {col1:{0:val11, 1:val21}, col2:{0:val12, 1:val22}}
-          
           const rows = results.data;
           const columns = {};
   
@@ -187,6 +183,15 @@ function FileUpload() {
           >
             VisCheck
           </Typography>
+
+          <Typography
+            variant="body1"
+            align="left"
+            sx={{ color: '#000000', marginBottom: 2 }}
+          >
+            Please upload the files below to receive AI-generated recommendations on the ethical and aesthetic aspects of your data visualization. <strong>At minimum, provide the chart image.</strong> Data files should be in CSV format. If your chart represents only a portion of a larger dataset, consider uploading the full dataset as well for a more in-depth analysis.
+          </Typography>
+
           <Box
             component="form"
             onSubmit={handleSubmit}
