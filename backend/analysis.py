@@ -67,30 +67,38 @@ def initial_checks(chart_data: pd.DataFrame, full_data: pd.DataFrame) -> dict:
         results["cherry_picking_check"] = check_cherry_picking(full_data, chart_data)
     return results
 
-def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: pd.DataFrame, initial_analysis: dict) -> str:
-    # Create a robust prompt for GPT-4
-    # No markdown or special formatting, just text.
-    prompt = f"""
-You are an expert in data visualization ethics and aesthetics. You have a chart image and optionally some chart data and a full dataset.
+def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: pd.DataFrame, initial_analysis: dict, additional_info: str) -> str:
+    # I know this section is a mess of if statements, don't kill me.
+    prompt = "You are an expert in data visualization ethics and aesthetics. Attached is a chart that requires your feedback"
 
-Initial analysis results:
-Axis Check: {initial_analysis.get('axis_check', '')}
-Cherry Picking Check: {initial_analysis.get('cherry_picking_check', '')}
+    if initial_analysis.get('axis_check', '') != '' or initial_analysis.get('cherry_picking_check', '') != '':
+        prompt += "\n\nInitial analysis results:"
+    if initial_analysis.get('axis_check', '') != '':
+        prompt += f"\nAxis Check: {initial_analysis.get('axis_check', '')}"
+    if initial_analysis.get('cherry_picking_check', '') != '':
+        prompt += f"\nCherry Picking Check: {initial_analysis.get('cherry_picking_check', '')}"
 
-Chart Data: {chart_data.to_json() if chart_data is not None else "No Chart Data Provided"}
-Sheet Data: {sheet_data.to_json() if sheet_data is not None else "No Full Data Provided"}
-Chart: see attached image
+    if chart_data is not None:
+        prompt += f"\nchart_data: {chart_data.to_json()}"
 
-Your task is to provide constructive feedback to the chart's creator. The goal is to help them improve the chart so it does not mislead viewers, and so it adheres to best practices in ethical and aesthetic data visualization. Consider issues like truncated axes, cherry-picking of data, lack of context, missing data points, deceptive scales, confusing 3D effects, poor color choices, overcomplexity, missing labels, unclear legends, data smoothing that obscures important variation, selective highlighting that distorts the message, data embellishments, manipulations of time intervals, baseline omissions, rounding issues, sampling biases, inappropriate visual metaphors, and any form of chartjunk that detracts from clarity.
+    if sheet_data is not None:
+        prompt += f"\nsheet_data: {sheet_data.to_json()}\n"
+        
+    prompt += """
+    Chart: see attached image
 
-If the chart is missing certain data or you cannot confirm certain issues due to incomplete information, focus on general best practices and potential pitfalls. The output should be given directly to the creator, guiding them on how to avoid any ethical or misleading practices and how to improve aesthetics, clarity, and honesty in their data visualization.
+    Your task is to provide constructive feedback to the chart's creator. The goal is to help them improve the chart so it does not mislead viewers, and so it adheres to best practices in ethical and aesthetic data visualization. Consider issues like truncated axes, cherry-picking of data, lack of context, missing data points, deceptive scales, confusing 3D effects, poor color choices, overcomplexity, missing labels, unclear legends, data smoothing that obscures important variation, selective highlighting that distorts the message, data embellishments, manipulations of time intervals, baseline omissions, rounding issues, sampling biases, inappropriate visual metaphors, and any form of chartjunk that detracts from clarity.
 
-Do not use markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. Do not reference the fact that the user is reading this prompt or that you are an AI. Simply offer advice and observations. If initial checks are empty or if you have no data to analyze, provide general recommendations.
+    If the chart is missing certain data or you cannot confirm certain issues due to incomplete information, focus on general best practices and potential pitfalls. The output should be given directly to the creator, guiding them on how to avoid any ethical or misleading practices and how to improve aesthetics, clarity, and honesty in their data visualization.
 
-Seperate your feedback into two sections - one for ethical considerations and one for aesthetic considerations. Provide at least 3 points for each section. If there are any that overlap, only mention it in the ethical considerations section, but note that it also applies to aesthetics and highlight the connection. 
+    Do not use markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. Do not reference the fact that the user is reading this prompt or that you are an AI. Simply offer advice and observations. If initial checks are empty or if you have no data to analyze, provide general recommendations.
 
-If no chart data is provided or the full data isn't provided, don't mention anything about not having the data, just provide general advice based on the chart image alone.
-"""
+    Seperate your feedback into two sections - one for ethical considerations and one for aesthetic considerations. Provide at least 3 points for each section. If there are any that overlap, only mention it in the ethical considerations section, but note that it also applies to aesthetics and highlight the connection. 
+
+    If no chart data is provided or the full data isn't provided, don't mention anything about not having the data, just provide general advice based on the chart image alone.
+    """
+    if additional_info:
+        prompt += f"\nAdditional Information from User: {additional_info}"
 
     headers = {
         "Content-Type": "application/json",
@@ -136,7 +144,7 @@ If no chart data is provided or the full data isn't provided, don't mention anyt
         # If we can't parse a correct response, return something generic
         return "No additional feedback could be generated, response: " + str(response_json) + " error: " + str(e)
 
-def analyze_data(chart_b64: str, data: dict) -> str:
+def analyze_data(chart_b64: str, data: dict, additional_info: str) -> str:
     # Chart image is required. Data may be optional.
     full_data_df = None
     chart_data_df = None
@@ -169,7 +177,7 @@ def analyze_data(chart_b64: str, data: dict) -> str:
 
     # Call GPT-4 API even if data is missing; it can give general advice.
     try:
-        api_response = call_gpt4_api(chart_b64, full_data_df, chart_data_df, initial_analysis)
+        api_response = call_gpt4_api(chart_b64, full_data_df, chart_data_df, initial_analysis, additional_info)
         return api_response
     except Exception as e:
         # If GPT call fails, return a generic message

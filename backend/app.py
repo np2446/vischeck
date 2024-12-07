@@ -17,6 +17,7 @@ app.add_middleware(
 class RequestBody(BaseModel):
     full_data: Any = None
     chart_data: Any = None
+    additional_info: Any = None
     chart_base64: str
 
 @app.get("/")
@@ -28,6 +29,7 @@ async def process_data(request_body: RequestBody):
     # Only chart_base64 is truly required. full_data and chart_data may be absent or empty.
     full_data = request_body.full_data if request_body.full_data else {}
     chart_data = request_body.chart_data if request_body.chart_data else {}
+    additional_info = request_body.additional_info if request_body.additional_info else None
     chart_base64 = request_body.chart_base64
 
     data = {
@@ -39,5 +41,5 @@ async def process_data(request_body: RequestBody):
     print(data)
     print("Received chart base64:")
     print(chart_base64[:50])
-    result = analyze_data(chart_base64, data)
+    result = analyze_data(chart_base64, data, additional_info)
     return result

@@ -12,6 +12,7 @@ import {
   createTheme,
   ThemeProvider,
   LinearProgress,
+  TextField
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,6 +44,7 @@ function FileUpload() {
   const [chartImage, setChartImage] = useState(null);
   const [chartDataCSV, setChartDataCSV] = useState(null);
   const [fullDataCSV, setFullDataCSV] = useState(null);
+  const [additionalInfo, setAdditionalInfo] = useState(''); // New state for additional info
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({
@@ -54,18 +56,7 @@ function FileUpload() {
 
   useEffect(() => {
     if (response) {
-      // set reponse to empty string to clear the previous response
-      setTypedResponse(response[0]);
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < response.length && response[index]) {
-          setTypedResponse(prev => prev + response[index]);
-          index += 1;
-        } else {
-          clearInterval(interval);
-        }
-      }, 1); // Adjust typing speed (lower value = faster)
-      return () => clearInterval(interval);
+      setTypedResponse(response);
     }
   }, [response]);
 
@@ -100,37 +91,35 @@ function FileUpload() {
     if (field === 'image') {
       setChartImage(null);
       setUploadStatus(prev => ({ ...prev, image: null }));
-      if (imageInputRef.current) imageInputRef.current.value = null; // Clear input value
+      if (imageInputRef.current) imageInputRef.current.value = null;
     }
     if (field === 'chartData') {
       setChartDataCSV(null);
       setUploadStatus(prev => ({ ...prev, chartData: null }));
-      if (chartDataInputRef.current) chartDataInputRef.current.value = null; // Clear input value
+      if (chartDataInputRef.current) chartDataInputRef.current.value = null;
     }
     if (field === 'fullData') {
       setFullDataCSV(null);
       setUploadStatus(prev => ({ ...prev, fullData: null }));
-      if (fullDataInputRef.current) fullDataInputRef.current.value = null; // Clear input value
+      if (fullDataInputRef.current) fullDataInputRef.current.value = null;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Only check if chartImage is present
     if (!chartImage) return;
-  
+
     setLoading(true);
-  
-    // If chartDataCSV or fullDataCSV are provided, parse them; otherwise, set them to null
+
     const chartData = chartDataCSV ? await parseCSV(chartDataCSV) : null;
     const fullData = fullDataCSV ? await parseCSV(fullDataCSV) : null;
-  
+
     try {
-      console.log("Sending data to backend..." + backendUrl);
       const response = await axios.post(backendUrl, {
         chart_data: chartData,
         full_data: fullData,
-        chart_base64: chartImage
+        chart_base64: chartImage,
+        additional_info: additionalInfo 
       });
       setResponse(response.data);
     } catch (error) {
@@ -148,15 +137,14 @@ function FileUpload() {
         complete: results => {
           const rows = results.data;
           const columns = {};
-  
+
           rows.forEach((row, rowIndex) => {
             Object.keys(row).forEach(colName => {
               if (!columns[colName]) columns[colName] = {};
               columns[colName][rowIndex] = row[colName];
             });
           });
-  
-          // Resolve with a column-oriented data structure:
+
           resolve(columns);
         },
         error: err => reject(err),
@@ -230,6 +218,16 @@ function FileUpload() {
                 )}
               </Box>
             ))}
+
+            <TextField
+              label="Additional Information"
+              variant="outlined"
+              multiline
+              rows={4}
+              value={additionalInfo}
+              onChange={(e) => setAdditionalInfo(e.target.value)}
+              placeholder="Provide any additional context or instructions for the AI here..."
+            />
 
             <Button
               type="submit"
