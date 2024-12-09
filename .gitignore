@@ -1,6 +1,7 @@
 # .env file
 .env
 backend/.env
+frontend/chart-analysis-app/.env
 backend/~$Book.xlsm
 
 

@@ -1,12 +1,19 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import PasswordPage from './PasswordPage';
 import FileUpload from './FileUpload';
 import './App.css';
 
 function App() {
+  const [isAuthenticated, setAuthenticated] = useState(false);
+
   return (
-    <div className="App">
-      <FileUpload />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={isAuthenticated ? <FileUpload /> : <Navigate to="/login" />} />
+        <Route path="/login" element={<PasswordPage setAuth={setAuthenticated} />} />
+      </Routes>
+    </Router>
   );
 }
 

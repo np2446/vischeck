@@ -12,11 +12,11 @@ import {
   createTheme,
   ThemeProvider,
   LinearProgress,
-  TextField
+  TextField,
+  CssBaseline
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CloseIcon from '@mui/icons-material/Close';
-import ReactMarkdown from 'react-markdown';
 
 const theme = createTheme({
   palette: {
@@ -44,7 +44,7 @@ function FileUpload() {
   const [chartImage, setChartImage] = useState(null);
   const [chartDataCSV, setChartDataCSV] = useState(null);
   const [fullDataCSV, setFullDataCSV] = useState(null);
-  const [additionalInfo, setAdditionalInfo] = useState(''); // New state for additional info
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState({
@@ -56,11 +56,12 @@ function FileUpload() {
 
   useEffect(() => {
     if (response) {
-      setTypedResponse(response);
+      // go through the response and remove any asterisks
+      const responseText = response.replace(/\*/g, '');
+      setTypedResponse(responseText);
     }
   }, [response]);
 
-  // Refs for file inputs
   const imageInputRef = useRef(null);
   const chartDataInputRef = useRef(null);
   const fullDataInputRef = useRef(null);
@@ -69,7 +70,7 @@ function FileUpload() {
     const file = e.target.files[0];
     const reader = new FileReader();
     reader.onloadend = () => {
-      setChartImage(reader.result.split(',')[1]); // Remove the data URL part
+      setChartImage(reader.result.split(',')[1]);
       setUploadStatus(prev => ({ ...prev, image: file.name }));
     };
     reader.readAsDataURL(file);
@@ -110,7 +111,6 @@ function FileUpload() {
     if (!chartImage) return;
 
     setLoading(true);
-
     const chartData = chartDataCSV ? await parseCSV(chartDataCSV) : null;
     const fullData = fullDataCSV ? await parseCSV(fullDataCSV) : null;
 
@@ -154,114 +154,98 @@ function FileUpload() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(180deg, #F3F2F1, #FFFFFF)',
-          padding: 4,
-        }}
-      >
-        <Container maxWidth="md">
-          <Typography
-            variant="h4"
-            component="h1"
-            gutterBottom
-            align="center"
-            sx={{ color: '#0078D4', fontWeight: 600 }}
-          >
-            VisCheck
-          </Typography>
-
-          <Typography
-            variant="body1"
-            align="left"
-            sx={{ color: '#000000', marginBottom: 2 }}
-          >
-            Please upload the files below to receive AI-generated recommendations on the ethical and aesthetic aspects of your data visualization. <strong>At minimum, provide the chart image.</strong> Data files should be in CSV format. If your chart represents only a portion of a larger dataset, consider uploading the full dataset as well for a more in-depth analysis.
-          </Typography>
-
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-          >
-            {['image', 'chartData', 'fullData'].map((field, index) => (
-              <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<UploadFileIcon />}
-                  component="label"
-                  color="primary"
-                >
-                  {`Upload ${field === 'image' ? 'Chart Image' : field === 'chartData' ? 'Chart Data (CSV)' : 'Full Data (CSV)'}`}
-                  <input
-                    type="file"
-                    hidden
-                    accept={field === 'image' ? 'image/*' : '.csv'}
-                    onChange={field === 'image' ? handleImageChange : field === 'chartData' ? handleChartDataChange : handleFullDataChange}
-                    ref={field === 'image' ? imageInputRef : field === 'chartData' ? chartDataInputRef : fullDataInputRef}
-                  />
-                </Button>
-                {uploadStatus[field] && (
-                  <>
-                    <Typography variant="body2" color="primary">
-                      {uploadStatus[field]}
-                    </Typography>
-                    <IconButton
-                      sx={{ color: 'black' }}
-                      onClick={() => handleRemoveFile(field)}
-                      size="small"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </>
-                )}
-              </Box>
-            ))}
-
-            <TextField
-              label="Additional Information"
-              variant="outlined"
-              multiline
-              rows={4}
-              value={additionalInfo}
-              onChange={(e) => setAdditionalInfo(e.target.value)}
-              placeholder="Provide any additional context or instructions for the AI here..."
-            />
-
-            <Button
-              type="submit"
-              variant="contained"
-              color="secondary"
-              disabled={!chartImage}
-            >
-              Submit
-            </Button>
-          </Box>
-
-          {loading && (
-            <Box sx={{ marginTop: 4 }}>
-              <Typography variant="body1" align="center" color="primary">
-                Asking our AI Overlords for Ethical and Aesthetic Guidance...
-              </Typography>
-              <LinearProgress color="primary" />
+      <CssBaseline />
+      <Container maxWidth="xl">
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 2,
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          paddingTop: 4
+        }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#0078D4', fontWeight: 600 }}>
+              VisCheck
+            </Typography>
+            <Typography variant="body1" align="left" sx={{ color: '#000000', marginBottom: 2 }}>
+              Please upload the files below to receive AI-generated recommendations on the ethical and aesthetic aspects of your data visualization. <strong>At minimum, provide the chart image.</strong> Data files should be in CSV format. If your chart represents only a portion of a larger dataset, consider uploading the full dataset as well for a more in-depth analysis.
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {['image', 'chartData', 'fullData'].map((field, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<UploadFileIcon />}
+                    component="label"
+                    color="primary"
+                  >
+                    {`Upload ${field === 'image' ? 'Chart Image' : field === 'chartData' ? 'Chart Data (CSV)' : 'Full Data (CSV)'}`}
+                    <input
+                      type="file"
+                      hidden
+                      accept={field === 'image' ? 'image/*' : '.csv'}
+                      onChange={field === 'image' ? handleImageChange : field === 'chartData' ? handleChartDataChange : handleFullDataChange}
+                      ref={field === 'image' ? imageInputRef : field === 'chartData' ? chartDataInputRef : fullDataInputRef}
+                    />
+                  </Button>
+                  {uploadStatus[field] && (
+                    <>
+                      <Typography variant="body2" color="primary">
+                        {uploadStatus[field]}
+                      </Typography>
+                      <IconButton
+                        sx={{ color: 'black' }}
+                        onClick={() => handleRemoveFile(field)}
+                        size="small"
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    </>
+                  )}
+                </Box>
+              ))}
+              <TextField
+                label="Additional Information"
+                variant="outlined"
+                multiline
+                rows={4}
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                placeholder="Provide any additional context or instructions for the AI here..."
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                color="secondary"
+                disabled={!chartImage}
+              >
+                Submit
+              </Button>
             </Box>
-          )}
-
+            {loading && (
+              <Box sx={{ marginTop: 4 }}>
+                <Typography variant="body1" align="center" color="primary">
+                  Asking our AI Overlords for Ethical and Aesthetic Guidance...
+                </Typography>
+                <LinearProgress color="primary" />
+              </Box>
+            )}
+          </Box>
           {!loading && response && (
-            <Card sx={{ marginTop: 4, boxShadow: 2, borderRadius: 2 }}>
+            <Card sx={{ flex: 1, boxShadow: 2, borderRadius: 2 }}>
               <CardContent>
                 <Typography variant="h6" component="div" sx={{ color: '#0078D4' }}>
                   Response
                 </Typography>
                 <Box sx={{ textAlign: 'left', fontFamily: 'Segoe UI', fontSize: '1rem', whiteSpace: 'pre-wrap' }}>
-                  <ReactMarkdown>{typedResponse}</ReactMarkdown>
+                  <Typography>{typedResponse}</Typography>
                 </Box>
               </CardContent>
             </Card>
           )}
-        </Container>
-      </Box>
+        </Box>
+      </Container>
     </ThemeProvider>
   );
 }

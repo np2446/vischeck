@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from analysis import analyze_data
 from pydantic import BaseModel
 from typing import Any
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+site_password = os.getenv("PASSWORD")
 
 app = FastAPI()
 
@@ -23,6 +28,14 @@ class RequestBody(BaseModel):
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+# password route where user sends password in query string and receives a response (false if incorrect, true if correct)
+@app.get("/password")
+async def check_password(given_password: str):
+    if given_password == site_password:
+        return {"correct": True}
+    else:
+        return {"correct": False}
 
 @app.post("/process-data")
 async def process_data(request_body: RequestBody):

@@ -96,6 +96,9 @@ def call_gpt4_api(chart_img_base64: str, sheet_data: pd.DataFrame, chart_data: p
     Seperate your feedback into two sections - one for ethical considerations and one for aesthetic considerations. Provide at least 3 points for each section. If there are any that overlap, only mention it in the ethical considerations section, but note that it also applies to aesthetics and highlight the connection. 
 
     If no chart data is provided or the full data isn't provided, don't mention anything about not having the data, just provide general advice based on the chart image alone.
+
+    Again, it is imperative that you just provide a plain-text response. Do not include any markdown or formatting that requires further rendering. Keep the language direct, clear, and instructive. 
+    For example, do not include **bold** or *italic* text or any other formatting that requires further rendering.
     """
     if additional_info:
         prompt += f"\nAdditional Information from User: {additional_info}"
