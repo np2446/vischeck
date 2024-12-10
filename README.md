@@ -57,23 +57,26 @@ VisCheck is a comprehensive web application designed for users to upload chart i
 ### Steps
 
 1. **Clone the Repository**:
+2. 
    ```bash
    git clone https://github.com/np2446/vischeck.git
    cd vischeck
 
-2. **Setup the Backend**:
+3. **Setup the Backend**:
    ```bash
    cd backend
    pip install -r requirements.txt
+   touch .env
+   nano .env # create env vars `OPENAI_KEY` and `PASSWORD`
    python app.py
 
-3. **Setup the Frontend**:
+4. **Setup the Frontend**:
    ```bash
     cd ../frontend
     npm install
     npm start
 
-4. **Access the Application**:
+5. **Access the Application**:
     - Open `http://localhost:3000` in your browser to use the application.\
 
 ---
