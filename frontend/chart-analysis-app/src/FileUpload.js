@@ -40,7 +40,7 @@ const theme = createTheme({
 });
 
 function FileUpload() {
-  const [backendUrl, setBackendUrl] = useState("https://intense-sands-59577-33fe9a67166e.herokuapp.com/process-data");
+  const backendUrl = process.env.BACKEND_URL + '/process-data' || 'localhost:8000/process-data'; 
   const [chartImage, setChartImage] = useState(null);
   const [chartDataCSV, setChartDataCSV] = useState(null);
   const [fullDataCSV, setFullDataCSV] = useState(null);

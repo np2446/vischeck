@@ -31,13 +31,14 @@ const theme = createTheme({
 });
 
 function PasswordPage({ setAuth }) {
+  const backendUrl = process.env.BACKEND_URL || 'localhost:8000';
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const navigate = useNavigate(); // Create a navigate function instance
 
   const verifyPassword = async () => {
     try {
-      const response = await axios.get('https://intense-sands-59577-33fe9a67166e.herokuapp.com/password' + "?given_password=" + password);
+      const response = await axios.get(backendUrl + "/password?given_password=" + password);
       if (response.data.correct === true) {
         setAuth(true);  // Set authentication state to true
         navigate('/');  // Navigate to the main page
